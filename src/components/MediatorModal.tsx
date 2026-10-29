@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   X, 
   Check, 
   Send, 
   Edit3, 
-  Shield, 
-  AlertCircle, 
-  ArrowRight, 
   CheckCircle2, 
   Lock,
-  ThumbsUp,
-  MessageSquare
+  Volume2,
+  VolumeX,
+  SlidersHorizontal,
+  Eye,
+  ShieldCheck,
+  HeartHandshake
 } from 'lucide-react';
 import { MediatorAnalysisResponse } from '../types';
 
@@ -33,25 +34,91 @@ export const MediatorModal: React.FC<MediatorModalProps> = ({
   onConfirmSend,
 }) => {
   const [selectedText, setSelectedText] = useState(analysis.suggestedRewrite);
+  const [selectedVariant, setSelectedVariant] = useState<'balanced' | 'firm' | 'collaborative'>('balanced');
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(analysis.suggestedRewrite);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Stop speaking when modal closes
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   if (!isOpen) return null;
+
+  const triggerHaptic = (ms = 15) => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(ms);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  // Tone variant switcher
+  const handleSelectVariant = (variant: 'balanced' | 'firm' | 'collaborative') => {
+    triggerHaptic(10);
+    setSelectedVariant(variant);
+    let target = analysis.suggestedRewrite;
+    if (analysis.variants && analysis.variants[variant]) {
+      target = analysis.variants[variant];
+    }
+    setSelectedText(target);
+    setEditedText(target);
+  };
+
+  // Speech preview
+  const handleToggleSpeech = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    triggerHaptic(10);
+    const utterance = new SpeechSynthesisUtterance(selectedText);
+    utterance.rate = 0.95; // calm, measured pacing
+    utterance.pitch = 1.0;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
 
   // The 3 required actions:
   // 1. Use Suggested Message
   const handleUseSuggested = () => {
-    onConfirmSend(analysis.suggestedRewrite, true, originalDraft);
+    triggerHaptic(20);
+    if (isSpeaking && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    onConfirmSend(selectedText, true, originalDraft);
   };
 
   // 2. Edit Message
   const handleApplyEdit = () => {
     if (!editedText.trim()) return;
+    triggerHaptic(20);
+    if (isSpeaking && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     onConfirmSend(editedText.trim(), true, originalDraft);
   };
 
   // 3. Send Original (unmodified)
   const handleSendOriginal = () => {
+    triggerHaptic(20);
+    if (isSpeaking && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     onConfirmSend(originalDraft, false);
   };
 
@@ -80,9 +147,11 @@ export const MediatorModal: React.FC<MediatorModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (isSpeaking && typeof window !== 'undefined') window.speechSynthesis.cancel();
+              onClose();
+            }}
             className="p-1.5 text-[#737A8C] hover:text-[#252830] hover:bg-[#EFECE6] rounded-full transition-colors"
-            title="Cancel"
           >
             <X className="w-5 h-5" />
           </button>
@@ -97,7 +166,7 @@ export const MediatorModal: React.FC<MediatorModalProps> = ({
               <span className="font-medium">Strictly Private to You</span>
             </div>
             <span className="text-[11px] text-[#736B94]">
-              {recipientName} will only see the final message you approve
+              {recipientName} only sees what you explicitly approve
             </span>
           </div>
 
@@ -127,6 +196,17 @@ export const MediatorModal: React.FC<MediatorModalProps> = ({
             )}
           </div>
 
+          {/* Perspective Preview: What Recipient Hears */}
+          {analysis.recipientPerspective && (
+            <div className="p-3 bg-[#EBF3EE]/70 border border-[#CDE0D3] rounded-xl text-xs flex items-start gap-2">
+              <Eye className="w-3.5 h-3.5 text-[#476B51] shrink-0 mt-0.5" />
+              <div className="text-[#36573F] leading-relaxed">
+                <strong>{recipientName}'s Likely Reaction: </strong>
+                <span>{analysis.recipientPerspective}</span>
+              </div>
+            </div>
+          )}
+
           {/* Comparison Cards: Original vs Suggested */}
           <div className="space-y-3">
             {/* 1. Original Draft */}
@@ -142,21 +222,79 @@ export const MediatorModal: React.FC<MediatorModalProps> = ({
               </p>
             </div>
 
-            {/* 2. Suggested Rewrite Card */}
-            <div className="p-4 bg-gradient-to-b from-[#F9F8FD] to-white border border-[#D3CCE8] rounded-2xl shadow-sm relative">
-              <div className="flex items-center justify-between mb-2">
+            {/* 2. Suggested Rewrite Card with Tone Variants & Audio Reader */}
+            <div className="p-4 bg-gradient-to-b from-[#F9F8FD] to-white border border-[#D3CCE8] rounded-2xl shadow-sm relative space-y-3">
+              {/* Header with tone variant filters and audio preview */}
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-[#5D5387]">
                   <Sparkles className="w-3.5 h-3.5 text-[#7C72A8]" />
                   <span className="text-xs font-semibold uppercase tracking-wider">
                     Suggested Rewrite
                   </span>
                 </div>
-                {analysis.toneAnalysis.isAlreadyClear && (
-                  <span className="text-[10px] font-medium px-2 py-0.5 bg-[#ECF3EE] text-[#476B51] rounded-full border border-[#CDE0D3]">
-                    Already clear
-                  </span>
-                )}
+
+                <div className="flex items-center gap-1.5">
+                  {/* Hear out loud button */}
+                  <button
+                    type="button"
+                    onClick={handleToggleSpeech}
+                    className={`p-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
+                      isSpeaking
+                        ? 'bg-[#7C72A8] text-white animate-pulse'
+                        : 'bg-[#F0EEF8] text-[#584E82] hover:bg-[#E4E0F4]'
+                    }`}
+                    title={isSpeaking ? 'Stop playback' : 'Listen to how this sounds out loud'}
+                  >
+                    {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                    <span className="text-[10px] hidden sm:inline">{isSpeaking ? 'Playing' : 'Listen'}</span>
+                  </button>
+
+                  {analysis.toneAnalysis.isAlreadyClear && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 bg-[#ECF3EE] text-[#476B51] rounded-full border border-[#CDE0D3]">
+                      Clear
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Tone Variant selector buttons */}
+              {analysis.variants && (
+                <div className="flex items-center gap-1.5 bg-[#F0EEF8]/60 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectVariant('balanced')}
+                    className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-medium transition-all ${
+                      selectedVariant === 'balanced'
+                        ? 'bg-white text-[#3B3654] shadow-xs'
+                        : 'text-[#6A6487] hover:text-[#252830]'
+                    }`}
+                  >
+                    Balanced
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectVariant('firm')}
+                    className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-medium transition-all ${
+                      selectedVariant === 'firm'
+                        ? 'bg-white text-[#3B3654] shadow-xs'
+                        : 'text-[#6A6487] hover:text-[#252830]'
+                    }`}
+                  >
+                    Firm Boundary
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectVariant('collaborative')}
+                    className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-medium transition-all ${
+                      selectedVariant === 'collaborative'
+                        ? 'bg-white text-[#3B3654] shadow-xs'
+                        : 'text-[#6A6487] hover:text-[#252830]'
+                    }`}
+                  >
+                    Collaborative
+                  </button>
+                </div>
+              )}
 
               {isEditing ? (
                 <div className="space-y-2">
@@ -223,6 +361,7 @@ export const MediatorModal: React.FC<MediatorModalProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => {
+                triggerHaptic(10);
                 setIsEditing(!isEditing);
                 if (!isEditing) setEditedText(selectedText);
               }}

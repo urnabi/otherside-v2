@@ -68,20 +68,58 @@ export default function App() {
     }
   };
 
+  // Android back button & gesture navigation handler
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isAndroidInstallOpen) {
+        setIsAndroidInstallOpen(false);
+        return;
+      }
+      if (isSettingsOpen) {
+        setIsSettingsOpen(false);
+        return;
+      }
+      if (isNewChatOpen) {
+        setIsNewChatOpen(false);
+        return;
+      }
+      if (currentScreen === 'chat' || currentScreen === 'invitation') {
+        setCurrentScreen('home');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentScreen, isAndroidInstallOpen, isSettingsOpen, isNewChatOpen]);
+
+  const triggerHaptic = (ms = 15) => {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(ms);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
   // Welcome -> Home
   const handleStartFromWelcome = (chosenName: string) => {
+    triggerHaptic(15);
     setUserName(chosenName);
+    window.history.pushState({ screen: 'home' }, '');
     setCurrentScreen('home');
   };
 
   // Open Conversation
   const handleOpenConversation = (convId: string) => {
+    triggerHaptic(15);
     const conv = conversations.find((c) => c.id === convId);
     if (!conv) return;
 
     if (conv.status === 'pending') {
       // If pending, show invitation view to allow recipient acceptance
       setInvitationConv(conv);
+      window.history.pushState({ screen: 'invitation' }, '');
       setCurrentScreen('invitation');
     } else {
       setActiveConvId(convId);
@@ -90,6 +128,7 @@ export default function App() {
       if (!p) {
         setActiveUserId(conv.participants[0].id);
       }
+      window.history.pushState({ screen: 'chat' }, '');
       setCurrentScreen('chat');
     }
   };

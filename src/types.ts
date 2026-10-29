@@ -41,6 +41,12 @@ export interface MediatorAnalysisResponse {
   suggestedRewrite: string;
   reasoning: string;
   toneAnalysis: ToneAnalysis;
+  recipientPerspective?: string;
+  variants?: {
+    balanced: string;
+    firm: string;
+    collaborative: string;
+  };
 }
 
 export type ScreenType = 'welcome' | 'home' | 'chat' | 'invitation' | 'new-chat';

@@ -100,10 +100,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </div>
               <div>
                 <span className="text-xs font-semibold text-[#294230] block leading-tight">
-                  Android App & APK
+                  Install Android App
                 </span>
                 <span className="text-[11px] text-[#4F6354]">
-                  Install to Android device or build Google Play package
+                  Add THE OTHER SIDE to your Android home screen
                 </span>
               </div>
             </div>

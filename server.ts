@@ -215,6 +215,18 @@ function fallbackAnalysis(draft: string) {
       potentialMisunderstanding,
       isAlreadyClear,
       preservesBoundaries: 'Preserves your exact request and perspective.'
+    },
+    recipientPerspective: isBlaming || isSarcasticOrPassive || isAggressive
+      ? 'They will perceive this as a calm, specific request rather than an attack, which lowers defensiveness.'
+      : 'They will hear your thoughts directly with clarity and mutual respect.',
+    variants: {
+      balanced: suggestedRewrite,
+      firm: isBlaming || isSarcasticOrPassive || isAggressive
+        ? `I want to be clear about my expectations on this. I need us to address this directly without sidestepping.`
+        : suggestedRewrite,
+      collaborative: isBlaming || isSarcasticOrPassive || isAggressive
+        ? `I value our communication and want to find a way that works for both of us. Can we talk this through together?`
+        : suggestedRewrite
     }
   };
 }
@@ -254,8 +266,11 @@ ${trimmedDraft}
 Analyze this outgoing draft carefully according to your mediator instructions.
 Identify any wording that could unintentionally sound accusatory, dismissive, hostile, or ambiguous.
 Determine whether a rewrite is actually needed. If it is already clear and respectful, state so and keep the rewrite identical or with minimal polish.
-Generate a calmer, clearer suggested rewrite that preserves the sender's original meaning, feelings, boundaries, and intended request.
-Explain briefly why the rewrite reduces misunderstanding without taking sides.`;
+Generate:
+1. A primary calmer, clearer suggested rewrite preserving meaning and boundaries.
+2. Two alternative tone variants: "firm" (maintains a direct respectful boundary) and "collaborative" (emphasizes mutual problem-solving).
+3. The recipient's perspective: how the recipient is likely to hear this compared to the original draft.
+4. Brief explanation of why the rewrite reduces misunderstanding without taking sides.`;
 
     const response = await aiClient.models.generateContent({
       model: 'gemini-3.8-flash',
@@ -274,6 +289,19 @@ Explain briefly why the rewrite reduces misunderstanding without taking sides.`;
             reasoning: {
               type: Type.STRING,
               description: 'Brief, neutral explanation of why this rewrite reduces misunderstanding.'
+            },
+            recipientPerspective: {
+              type: Type.STRING,
+              description: 'What the recipient will hear and feel compared to the original draft.'
+            },
+            variants: {
+              type: Type.OBJECT,
+              properties: {
+                balanced: { type: Type.STRING, description: 'Balanced and natural clarity' },
+                firm: { type: Type.STRING, description: 'Direct, firm boundary without hostility' },
+                collaborative: { type: Type.STRING, description: 'Warm and cooperative problem solving' }
+              },
+              required: ['balanced', 'firm', 'collaborative']
             },
             toneAnalysis: {
               type: Type.OBJECT,

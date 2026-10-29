@@ -97,7 +97,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="w-full py-2.5 px-3 bg-[#EBF3EE] hover:bg-[#DFEDE3] border border-[#CDE0D3] rounded-xl text-xs font-semibold text-[#36573F] flex items-center justify-center gap-2 transition-colors"
               >
                 <Smartphone className="w-3.5 h-3.5 text-[#477053]" />
-                <span>Android App & APK Packaging</span>
+                <span>Android App Installation</span>
               </button>
             </div>
           )}
