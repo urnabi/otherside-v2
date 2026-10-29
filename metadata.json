@@ -1,0 +1,6 @@
+{
+  "name": "THE OTHER SIDE",
+  "description": "Say what you mean. Understand what they hear. An empathetic AI-mediated chat application designed to reduce misunderstandings.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

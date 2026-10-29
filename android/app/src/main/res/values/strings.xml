@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">THE OTHER SIDE</string>
+    <string name="title_activity_main">THE OTHER SIDE</string>
+    <string name="package_name">com.theotherside.app</string>
+    <string name="custom_url_scheme">com.theotherside.app</string>
+</resources>
